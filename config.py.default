@@ -1,0 +1,5 @@
+config = {
+    "module_disable": [
+        "iptables"
+    ]
+}
