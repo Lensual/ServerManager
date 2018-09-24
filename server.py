@@ -2,12 +2,14 @@
 import os
 import importlib
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import globalvar as gVar
+gVar._init()
 
 from config import config
 
 modules = {}
+gVar.set_value("modules",modules)
 modDir = []
-
 
 def loadModules():
     global modDir
