@@ -8,8 +8,9 @@ gVar._init()
 from config import config
 
 modules = {}
-gVar.set_value("modules",modules)
+gVar.set_value("modules", modules)
 modDir = []
+
 
 def loadModules():
     global modDir
@@ -80,7 +81,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split(os.sep)
         print(path)
-        BaseHTTPRequestHandler.send_response(self,200,"hello")
+        BaseHTTPRequestHandler.send_response(self, 200, "hello")
 
     def do_POST(self):
         pass
@@ -88,6 +89,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
 loadModules()
 initModules()
+modules["iptables"].start()
 #print("Hello, World!")
 httpd = HTTPServer(("", 5000), RequestHandler)
 httpd.serve_forever()

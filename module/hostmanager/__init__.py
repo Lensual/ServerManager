@@ -1,21 +1,34 @@
 from module.hostmanager.config import config
 import paramiko
 import time
+import base64
+from io import StringIO
 
 # TODO err catch and log
 
 
 def init():
-    pass
+    print("hostmanager init")
 
 
 def getHosts():
-    return config["hosts"]
+    hosts = []
+    for host in config["hosts"]:
+        hosts.append({"name": host["name"], "ip": host["ip"]})
+    return hosts
+
+
+def inManaged(hostname):
+    for host in config["hosts"]:
+        if host["name"] == hostname:
+            return True
+    return False
 
 
 class Host:
     __Terminal = None
     __ssh = None
+    __hostconf = None
 
     def __init__(self, name):
         for host in config["hosts"]:
@@ -32,20 +45,43 @@ class Host:
                 self.__ssh = paramiko.SSHClient()
                 self.__ssh.set_missing_host_key_policy(
                     paramiko.AutoAddPolicy)
-                # TODO private key login
                 # TODO ssh.get_host_keys().add(self.__hostconf["ip"], 'ssh-rsa', key)
-                self.__ssh.connect(self.__hostconf["ip"],
-                                   username=sshconf["username"],
-                                   password=sshconf["password"],
-                                   port=sshconf["port"])
+                if sshconf["prikey"] is not None:
+                    pkey = paramiko.RSAKey.from_private_key(
+                        StringIO(sshconf["prikey"]))
+                    self.__ssh.connect(self.__hostconf["ip"],
+                                       username=sshconf["username"],
+                                       port=sshconf["port"],
+                                       pkey=pkey,
+                                       passphrase=sshconf["passphrase"])
+                else:
+                    self.__ssh.connect(self.__hostconf["ip"],
+                                       username=sshconf["username"],
+                                       password=sshconf["password"],
+                                       port=sshconf["port"])
+
+            except TimeoutError:
+                self.clean()
+                return False
             except:
+                self.clean()
                 raise
+
         return True
+
+    def clean(self):
+        if  self.__Terminal is not None:
+            self.__Terminal.close()
+            del self.__Terminal
+        if self.__ssh is not None:
+            self.__ssh.close()
+            del self.__ssh
+
 
     def StopSSH(self):
         if self.__ssh is not None:
             self.__ssh.close()
-            self.__ssh = None
+            del self.__ssh
         return True
 
     def StartTerminal(self):
@@ -62,7 +98,7 @@ class Host:
     def StopTerminal(self):
         if self.__Terminal is not None:
             self.__Terminal.close()
-            self.__Terminal = None
+            del self.__Terminal
         return True
 
     def SetTimeout(self, timeout):

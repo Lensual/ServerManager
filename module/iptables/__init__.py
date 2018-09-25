@@ -3,19 +3,35 @@ import time
 import threading
 import os
 import importlib
+import globalvar as gVar
 
 
 def init():
-    sync()
+    global hostmanager
+    global stoping
+    stoping = False
+    hostmanager = gVar.get_value("modules")["hostmanager"]
+    print("iptables init")
 
 
 def start():
-    t = threading.Timer(config["interval"], sync)
-    t.start()
+    global stoping
+    stoping = False
+    stoping
+    sync()
 
 
 def stop():
-    pass
+    global stoping
+    stoping = True
+
+
+def inPrivate(hostname):
+    hosts = os.listdir(__path__[0]+"/private/")
+    for host in hosts:
+        if host == hostname:
+            return True
+    return False
 
 
 def sync():
@@ -27,17 +43,17 @@ def sync():
             __path__[0]+"/global/"+gTableName)})
 
     # scan private rules
-    pHosts = os.listdir(__path__[0]+"/private/")
-    for host in config["hosts"]:
-        for pHost in pHosts:
-            if host["name"] == pHost:
+    for host in config["hosts"]:  # match config
+        if inPrivate(host["name"]):  # match forder
+            if hostmanager.inManaged(host["name"]):  # match hostmanager
                 hostRules = ""
                 # Tables scan and merge
-                pTableNames = os.listdir(__path__[0]+"/private/"+pHost)
+                pTableNames = os.listdir(__path__[0]+"/private/"+host["name"])
                 for pTableName in pTableNames:
                     tableRules = ""
                     # private rules
-                    tableRules += genTable(__path__[0]+"/global/"+pTableName)
+                    tableRules += genTable(__path__[0] +
+                                           "/private/"+host["name"]+"/"+pTableName)
                     for gTable in gTables:
                         if gTable["name"] == pTableName:
                             tableRules += gTable["gTable"]  # global rules
@@ -67,8 +83,19 @@ def sync():
                         tableRules += "COMMIT\n"
                         hostRules += tableRules
                 # TODO sync
-                print(hostRules)
-                print("\n\n\n\n\n\n\n")
+                m_host = hostmanager.Host(host["name"])
+                opened = m_host.StartSSH()
+                if opened:
+                    m_host.WriteFile(hostRules.encode("utf8"), "/tmp/iptables")
+                    stdin, stdout, stderr = m_host.Exec(
+                        "iptables-restore < /tmp/iptables")
+                    # print(stdout.read())
+                else:
+                    # TODO log
+                    print("can not connect to \""+host["name"]+"\"")
+    if not stoping:
+        t = threading.Timer(config["interval"], sync)
+        t.start()
 
 
 def genPrivate(name):  # 生成private规则
@@ -146,4 +173,5 @@ def getChainFromRule(rule):  # 从单句规则里面取-A后面的链名
     return chain
 
 
-__all__ = ["init"]
+depend = ["hostmanager"]
+__all__ = ["depend", "init"]
