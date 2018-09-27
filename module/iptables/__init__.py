@@ -4,6 +4,7 @@ import threading
 import os
 import importlib
 import globalvar as gVar
+import os.path
 
 
 def init():
@@ -25,6 +26,7 @@ def stop():
     global stoping
     stoping = True
 
+#TODO wait for stoping
 
 def inPrivate(hostname):
     hosts = os.listdir(__path__[0]+"/private/")
@@ -35,64 +37,59 @@ def inPrivate(hostname):
 
 
 def sync():
-    # scan global rules
-    gTables = []
-    gTableNames = os.listdir(__path__[0]+"/global/")
-    for gTableName in gTableNames:
-        gTables.append({"name": gTableName, "gTable": genTable(
-            __path__[0]+"/global/"+gTableName)})
+    hostList = []
+    # get all hosts
+    for r in config["rules"]:
+        for h in r["hosts"]:
+            if h not in hostList:
+                hostList.append(h)
 
-    # scan private rules
-    for host in config["hosts"]:  # match config
-        if inPrivate(host["name"]):  # match forder
-            if hostmanager.inManaged(host["name"]):  # match hostmanager
-                hostRules = ""
-                # Tables scan and merge
-                pTableNames = os.listdir(__path__[0]+"/private/"+host["name"])
-                for pTableName in pTableNames:
-                    tableRules = ""
-                    # private rules
-                    tableRules += genTable(__path__[0] +
-                                           "/private/"+host["name"]+"/"+pTableName)
-                    for gTable in gTables:
-                        if gTable["name"] == pTableName:
-                            tableRules += gTable["gTable"]  # global rules
-                    # head=====================
-                    # chains
-                    tableRules = genChainsHeader(tableRules)+tableRules
-                    # table name
-                    tableRules = "*"+pTableName+"\n"+tableRules
-                    # foot=====================
-                    tableRules += "COMMIT\n"
-                    hostRules += tableRules
-                # add global
-                for gTable in gTables:
-                    exist = False
-                    for pTableName in pTableNames:
-                        if gTable["name"] == pTableName:
-                            exist = True
-                            break
-                    if not exist:
-                        tableRules = gTable["gTable"]
-                        # head================
-                        # chains
-                        tableRules = genChainsHeader(tableRules)+tableRules
-                        # table name
-                        tableRules = "*"+gTable["name"]+"\n"+tableRules
-                        # foot================
-                        tableRules += "COMMIT\n"
-                        hostRules += tableRules
-                # TODO sync
-                m_host = hostmanager.Host(host["name"])
-                opened = m_host.StartSSH()
-                if opened:
-                    m_host.WriteFile(hostRules.encode("utf8"), "/tmp/iptables")
-                    stdin, stdout, stderr = m_host.Exec(
-                        "iptables-restore < /tmp/iptables")
-                    # print(stdout.read())
-                else:
-                    # TODO log
-                    print("can not connect to \""+host["name"]+"\"")
+    # 遍历主机
+    for hostName in hostList:
+        hostRules = ""
+        tablesListCache = []
+        config["groups"].sort()  # TODO 按优先级排列
+        # 遍历规则组
+        for g in config["groups"]:
+            # 查找主机是否在groups内
+            if hostName in g["hosts"]:
+                rulesPath = __path__[0]+"/rules/"+g["name"] + "/"  # 规则组文件夹
+                tableList = os.listdir(rulesPath)
+                for tableName in tableList:  # 提取所有表 存入列表
+                    if tableName in tablesListCache:
+                        tablesListCache.append(tableName)
+
+        for tableName in tablesListCache:  # 遍历该主机拥有的表
+            thisTable = ""
+            # 再次遍历规则组
+            for g in config["groups"]:
+                # 查找主机是否在groups内
+                if hostName in g["hosts"]:
+                    # 表文件夹
+                    tablePath = __path__[0]+"/rules/"+g["name"]+"/"+tableName
+                    if os.path.isdir(tablePath):  # 表存在
+                        # 添加
+                        thisTable = genTable(tablePath)
+            # head================
+            # chain head
+            thisTable = genChainsHeader(thisTable) + thisTable
+            # table head
+            thisTable = "*" + tableName + "\n" + thisTable
+            # foot================
+            thisTable += "COMMIT\n"
+            hostRules += thisTable
+
+        # TODO sync
+        m_host = hostmanager.Host(hostName)
+        opened = m_host.StartSSH()
+        if opened:
+            m_host.WriteFile(hostRules.encode("utf8"), "/tmp/iptables")
+            stdin, stdout, stderr = m_host.Exec(
+                "iptables-restore < /tmp/iptables")
+            # print(stdout.read())
+        else:
+            # TODO log
+            print("can not connect to \""+hostName+"\"")
     if not stoping:
         t = threading.Timer(config["interval"], sync)
         t.start()
@@ -108,7 +105,7 @@ def genPrivate(name):  # 生成private规则
     return priTables
 
 
-def genTable(path):  # 根据文件夹内配置文件生成Table规则
+def genTable(path):  # 根据文件夹内配置文件生成Table规则 不包含链头表头
     table = ""
 
     # rules===============
