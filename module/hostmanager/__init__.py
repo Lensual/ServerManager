@@ -11,13 +11,6 @@ def init():
     print("hostmanager init")
 
 
-def getHosts():
-    hosts = []
-    for host in config["hosts"]:
-        hosts.append({"name": host["name"], "ip": host["ip"]})
-    return hosts
-
-
 def inManaged(hostname):
     for host in config["hosts"]:
         if host["name"] == hostname:
@@ -43,24 +36,44 @@ class Host:
             try:
                 sshconf = self.__hostconf["ssh"]
                 self.__ssh = paramiko.SSHClient()
-                self.__ssh.set_missing_host_key_policy(
-                    paramiko.AutoAddPolicy)
-                # TODO ssh.get_host_keys().add(self.__hostconf["ip"], 'ssh-rsa', key)
-                if sshconf["prikey"] is not None:
-                    pkey = paramiko.RSAKey.from_private_key(
-                        StringIO(sshconf["prikey"]))
+                # pubkey
+                if sshconf["pubkey"] is not None and sshconf["pubkey"].strip() != "":
+                    # 有pubkey 验证
+
+                    pkey = paramiko.RSAKey(data=base64.b64decode(sshconf["pubkey"]))
+
+                    self.__ssh.get_host_keys().add(
+                        self.__hostconf["ip"], 'ssh-rsa', pkey)
+                else:
+                    # 无pubkey 自动接受
+                    self.__ssh.set_missing_host_key_policy(
+                        paramiko.AutoAddPolicy)
+                # prikey
+                if sshconf["prikey"] is not None and sshconf["prikey"].strip() != "":
+                    # use prikey
+                    pkey = paramiko.RSAKey.from_private_key(StringIO(sshconf["prikey"]))
+
+                    #pkey = paramiko.RSAKey(key=base64.b64decode(sshconf["prikey"]))
+
                     self.__ssh.connect(self.__hostconf["ip"],
                                        username=sshconf["username"],
                                        port=sshconf["port"],
                                        pkey=pkey,
                                        passphrase=sshconf["passphrase"])
                 else:
+                    # use password
                     self.__ssh.connect(self.__hostconf["ip"],
                                        username=sshconf["username"],
                                        password=sshconf["password"],
                                        port=sshconf["port"])
 
             except TimeoutError:
+                self.clean()
+                return False
+            except paramiko.AuthenticationException:
+                self.clean()
+                return False
+            except paramiko.BadHostKeyException:
                 self.clean()
                 return False
             except:
@@ -70,13 +83,12 @@ class Host:
         return True
 
     def clean(self):
-        if  self.__Terminal is not None:
+        if self.__Terminal is not None:
             self.__Terminal.close()
             del self.__Terminal
         if self.__ssh is not None:
             self.__ssh.close()
             del self.__ssh
-
 
     def StopSSH(self):
         if self.__ssh is not None:

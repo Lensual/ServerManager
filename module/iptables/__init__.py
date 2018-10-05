@@ -26,7 +26,8 @@ def stop():
     global stoping
     stoping = True
 
-#TODO wait for stoping
+# TODO wait for stoping
+
 
 def inPrivate(hostname):
     hosts = os.listdir(__path__[0]+"/private/")
@@ -39,8 +40,8 @@ def inPrivate(hostname):
 def sync():
     hostList = []
     # get all hosts
-    for r in config["rules"]:
-        for h in r["hosts"]:
+    for g in config["groups"]:
+        for h in g["hosts"]:
             if h not in hostList:
                 hostList.append(h)
 
@@ -48,16 +49,17 @@ def sync():
     for hostName in hostList:
         hostRules = ""
         tablesListCache = []
-        config["groups"].sort()  # TODO 按优先级排列
+        # config["groups"].sort()  # TODO 按优先级排列
         # 遍历规则组
         for g in config["groups"]:
             # 查找主机是否在groups内
             if hostName in g["hosts"]:
-                rulesPath = __path__[0]+"/rules/"+g["name"] + "/"  # 规则组文件夹
-                tableList = os.listdir(rulesPath)
-                for tableName in tableList:  # 提取所有表 存入列表
-                    if tableName in tablesListCache:
-                        tablesListCache.append(tableName)
+                rulesPath = __path__[0]+"/groups/"+g["name"] + "/"  # 规则组文件夹
+                if os.path.isdir(rulesPath):
+                    tableList = os.listdir(rulesPath)
+                    for tableName in tableList:  # 提取所有表 存入列表
+                        if tableName not in tablesListCache:
+                            tablesListCache.append(tableName)
 
         for tableName in tablesListCache:  # 遍历该主机拥有的表
             thisTable = ""
@@ -66,7 +68,7 @@ def sync():
                 # 查找主机是否在groups内
                 if hostName in g["hosts"]:
                     # 表文件夹
-                    tablePath = __path__[0]+"/rules/"+g["name"]+"/"+tableName
+                    tablePath = __path__[0]+"/groups/"+g["name"]+"/"+tableName
                     if os.path.isdir(tablePath):  # 表存在
                         # 添加
                         thisTable = genTable(tablePath)
@@ -87,6 +89,7 @@ def sync():
             stdin, stdout, stderr = m_host.Exec(
                 "iptables-restore < /tmp/iptables")
             # print(stdout.read())
+            m_host.StopSSH()
         else:
             # TODO log
             print("can not connect to \""+hostName+"\"")
@@ -123,7 +126,7 @@ def genTable(path):  # 根据文件夹内配置文件生成Table规则 不包含
     fileText = ""
     for name in fNames:
         # TODO 自动生成注释和容错
-        file = open(path+os.sep+name, mode="r")
+        file = open(path+os.sep+name, mode="r", encoding="utf8")
         fileText += file.read()
         file.close()
         fileText += "\n"
