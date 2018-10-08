@@ -1,30 +1,41 @@
 #!/usr/bin/python3
+import sys
 import os
+import os.path
 import importlib
 from http.server import HTTPServer, BaseHTTPRequestHandler
+import logging
+import logging.handlers
 import globalvar as gVar
 gVar._init()
 
 from config import config
 
+import logger
+logger._init(config)
+logger.debug("logger inited")
+
+# Modules
 modules = {}
 gVar.set_value("modules", modules)
 modDir = []
+sys.path.append("./module")
+
 
 
 def loadModules():
     global modDir
     modDir = os.listdir("./module")
     for moduleName in modDir:
-        for disabled in config["module_disable"]:
-            if moduleName != disabled:  # 不初始化disable列表里的
-                loadModule(moduleName)
+        if moduleName not in config["module_disable"]: # 不初始化disable列表里的
+            loadModule(moduleName)
 
 
 def loadModule(moduleName):
     global modDir
     global modules
-    m = importlib.import_module("module."+moduleName)
+
+    m = importlib.import_module(moduleName)
 
     # 已存在
     if existModule(moduleName):
@@ -34,32 +45,34 @@ def loadModule(moduleName):
         for depName in m.depend:
             # 文件查找
             if depName not in modDir:
-                print("module \"{depName}\" not found".format_map(vars()))
+                logger.error(
+                    "module \"{depName}\" not found".format_map(vars()))
                 return False
 
             # 排除配置disable
             if depName in config["module_disable"]:
-                print(
+                logger.warn(
                     "module \"{m.__name__}\" depend on \"{depName}\", but it's disabled".format_map(vars()))
                 return False
 
-            # debug out
-            print(
+            # log out
+            logger.info(
                 "module \"{m.__name__}\" depend on \"{depName}\"".format_map(vars()))
 
             # 跳过已加载的模块
             if existModule(depName):
+                logger.debug("module \"{depName}\" exist. skip".format_map(vars()))
                 continue
 
             # 递归加载依赖
             success = loadModule(depName)
             if not success:
                 # TODO err out
-                print("exist")
+                logger.warn("module \""+depName+"\" exist")
                 return False
     # 正常加载
     modules[moduleName] = m
-    print("load module \"{m.__name__}\"".format_map(vars()))
+    logger.info("load module \"{m.__name__}\"".format_map(vars()))
     return True
 
 
@@ -87,9 +100,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         pass
 
 
+logger.debug("loading modules")
 loadModules()
+logger.debug("modules load complete")
+logger.debug("initializing modules")
 initModules()
+logger.debug("modules initialize complete")
+
+# debug
 modules["iptables"].start()
-#print("Hello, World!")
+
+# http
 httpd = HTTPServer(("", 5000), RequestHandler)
 httpd.serve_forever()

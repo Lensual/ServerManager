@@ -1,14 +1,13 @@
-from module.hostmanager.config import config
+from hostmanager.config import config
 import paramiko
 import time
 import base64
 from io import StringIO
-
-# TODO err catch and log
+import logger
 
 
 def init():
-    print("hostmanager init")
+    logger.info("hostmanager inited")
 
 
 def inManaged(hostname):
@@ -29,32 +28,35 @@ class Host:
                 self.__hostconf = host
                 break
         if self.__hostconf is None:
-            raise Exception
+            logger.error("\""+name+"\"不在hostmanager管理范围内")
+            raise Exception("\""+name+"\"不在hostmanager管理范围内")
 
     def StartSSH(self):
         if self.__ssh is None:
             try:
                 sshconf = self.__hostconf["ssh"]
                 self.__ssh = paramiko.SSHClient()
+                logger.debug("("+self.__hostconf["name"]+") 启动ssh客户端")
                 # pubkey
                 if sshconf["pubkey"] is not None and sshconf["pubkey"].strip() != "":
                     # 有pubkey 验证
+                    logger.debug("("+self.__hostconf["name"]+") 需要验证pubkey")
 
                     pkey = paramiko.RSAKey(data=base64.b64decode(sshconf["pubkey"]))
-
                     self.__ssh.get_host_keys().add(
                         self.__hostconf["ip"], 'ssh-rsa', pkey)
                 else:
                     # 无pubkey 自动接受
+                    logger.debug("("+self.__hostconf["name"]+") 自动接受pubkey")
+
                     self.__ssh.set_missing_host_key_policy(
                         paramiko.AutoAddPolicy)
                 # prikey
                 if sshconf["prikey"] is not None and sshconf["prikey"].strip() != "":
                     # use prikey
+                    logger.debug("("+self.__hostconf["name"]+") 使用私钥登陆")
+
                     pkey = paramiko.RSAKey.from_private_key(StringIO(sshconf["prikey"]))
-
-                    #pkey = paramiko.RSAKey(key=base64.b64decode(sshconf["prikey"]))
-
                     self.__ssh.connect(self.__hostconf["ip"],
                                        username=sshconf["username"],
                                        port=sshconf["port"],
@@ -62,21 +64,27 @@ class Host:
                                        passphrase=sshconf["passphrase"])
                 else:
                     # use password
+                    logger.debug("("+self.__hostconf["name"]+") 使用密码登陆")
+
                     self.__ssh.connect(self.__hostconf["ip"],
                                        username=sshconf["username"],
                                        password=sshconf["password"],
                                        port=sshconf["port"])
 
             except TimeoutError:
+                logger.warn("("+self.__hostconf["name"]+") SSH超时")
                 self.clean()
                 return False
             except paramiko.AuthenticationException:
+                logger.warn("("+self.__hostconf["name"]+") SSH认证失败")
                 self.clean()
                 return False
             except paramiko.BadHostKeyException:
+                logger.warn("("+self.__hostconf["name"]+") SSH pubkey认证失败")
                 self.clean()
                 return False
             except:
+                logger.error("("+self.__hostconf["name"]+") 未知错误")
                 self.clean()
                 raise
 

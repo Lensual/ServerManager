@@ -1,6 +1,7 @@
+import logger
 depend = []
 
 def init():
-    print("helloworld init")
+    logger.warn("helloworld inited. Please Delete This Module.")
 
 __all__ = ["depend", "init"]
