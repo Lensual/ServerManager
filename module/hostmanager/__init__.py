@@ -4,10 +4,12 @@ import time
 import base64
 from io import StringIO
 import logger
+import logging
 
 
 def init():
     logger.info("hostmanager inited")
+    logging.getLogger("paramiko").setLevel(config["paramikoLogLevel"]) 
 
 
 def inManaged(hostname):

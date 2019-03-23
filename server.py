@@ -4,8 +4,6 @@ import os
 import os.path
 import importlib
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import logging
-import logging.handlers
 import globalvar as gVar
 gVar._init()
 
