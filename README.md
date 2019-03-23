@@ -50,7 +50,7 @@ server.py中的模块加载过程
 3. initModules() 初始化 modules 中的模块
     * 调用的是模块中的init() **请导出此方法**
 4. startModules() 启动 modules 中的模块 (TODO)
-    * 调用的是模块中的start() ***请导出此方法*
+    * 调用的是模块中的start() ***请导出此方法**
 
 ### 关于模块接口导出
 给`__all__`赋值即可导出接口
@@ -63,3 +63,13 @@ server.py中的模块加载过程
 
 
 ### 全局共享变量
+globalvar提供了一个全局静态变量的支持
+
+引用globalvar
+> import globalvar as gVar
+
+设置变量
+>gVar.set_value(变量名,对象)
+
+获取变量
+>gVar.get_value(变量名)
