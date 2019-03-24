@@ -81,7 +81,7 @@ class Host:
                 logger.warn("("+self.__hostconf["name"]+") SSH认证失败")
                 self.clean()
                 return False
-            except paramiko.BadHostKeyException:
+            except paramiko.BadHostKeyException as e:   #TODO 详细错误信息
                 logger.warn("("+self.__hostconf["name"]+") SSH pubkey认证失败")
                 self.clean()
                 return False

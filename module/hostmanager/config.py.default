@@ -1,0 +1,21 @@
+config = {
+    "paramikoLogLevel": 30, #日志等级
+    "hosts": [
+        {
+            "name": "Meow", #自定义该主机的名字
+            "ip": "192.168.233.201",
+            "ssh": {
+                "username": "root",
+                "password": " ",
+                "port": 22,
+                #TODO 文件路径引用支持
+                "pubkey": "AAAAB3NzaC1yc2EAAAADAQABAAAAgQDd3Pr18mBxLUBTCX4NvHOzrkrSOn6xa7fzQXIHR8ENVXVNeJE91JOZgWmDOLmQUkR/9vDh8T3oLNqZuR/C+90rwb9XbvtmSO0aqF7IwtKrjLja+JJSabFYUNVpAQLyyureE7ec+mEv62PTDSYyEf2yGWjV+aZvJVM9+hWBFBlD5w==",
+                "prikey": """\
+                -----BEGIN RSA PRIVATE KEY-----
+                MIICXAIBAAKBgQDd3Pr18mBxLUBTCX4NvHOzrkrSOn6xa7fzQXIHR8ENVXVNeJE91JOZgWmDOLmQUkR/9vDh8T3oLNqZuR/C+90rwb9XbvtmSO0aqF7IwtKrjLja+JJSabFYUNVpAQLyyureE7ec+mEv62PTDSYyEf2yGWjV+aZvJVM9+hWBFBlD5wIDAQABAoGBAITcJnVOVi6wWIrhblkvd2Ish6XpXaFFznyfvndZouQnPv3Lq76JJHKSqurn90fT3C19ZbcITnhRE/9mevy68zB5bboT+DiLG9aiWpAETqkdhLBBCPNSu8IYfsYSSj84xvK8vk1McnIO60JRzP36WKIk0G3PuAAvsRMYnNO9VmHhAkEA88WIiGAyLmCbLK4FTnzi6L1O6WnKaYGnGGQUEe9KJP+g0sk+J09aA9DP5WhoJemIeDrlD/bqsiXUqpsd4gNyuQJBAOj+GoD9W48V4t2eTRVKiryModkCigm3Pzk+8ds0rmGzYTx9HljAuc7N9W/jx6gRAJc8F4BusV53HZtn4tX3m58CQBQr4UtfomdiCRUeZUQEY4Zcu93mqiAm4VvMVDjTsy/yky0+B82a7Fjqe3mBNTUF6QwB25iBlxQcu0dOxJ9CJ8kCQCP6WQ1iEileL9IZB74p7JKBBN0Fz1sAuPqWBbLbx7G+iV1V1MHPwOF2XFgSzFnfhj/UP6zNawYzTpcYy6ZOvfECQHyj1gZ/SlZmURmaRo0Gt+ES04LXhm0bSJd73FB4dsvR0iPNjBRttQPNnJ9xcgC2O2KnGxFSUlNTrmHWYYu5nqo=
+                -----END RSA PRIVATE KEY-----""",
+                "passphrase": ""    #私钥解锁密码
+            }
+        }
+    ]
+}
