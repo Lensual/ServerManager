@@ -2,6 +2,8 @@ import json
 import os
 import time
 
+import urllib3
+
 import logger
 
 
@@ -79,6 +81,21 @@ class Cloudflare():
         self.get_ZoneID()
         self.record_id = {}  # record_id={domain:[{id,type,name,content}]}
         self.get_RecordID()
+        self.headers = {'X-Auth-Email': email,
+                        'X-Auth-Key': key, 'Content-Type': 'application/json'}
+
+    def __get_request__(self, url):
+        # 返回json的string
+        r = urllib3.PoolManager().request("GET", url, headers=self.headers).data
+        r = str(r, encoding="utf-8")
+        return r
+
+    def __put_request__(self, url, data):
+        # data为一个字典
+        data = json.dumps(data).encode('utf-8')
+        r = urllib3.PoolManager().request("PUT", url, body=data, headers=self.headers).data
+        r = str(r, encoding="utf-8")
+        return r
 
     def update_DNS_Record(self, prefix, domain, new_content, type):
         if not (prefix == "@" or prefix == ""):
@@ -99,13 +116,10 @@ class Cloudflare():
         if recordid == "":  # 找不到则新建记录
             logger.error("Can't find record!")
             None
-        updaterecord = os.popen('''curl -k -s -X PUT "https://api.cloudflare.com/client/v4/zones/'''+zoneid+'''/dns_records/'''+recordid+'''" \
-            -H "X-Auth-Email: '''+self.api_email+'''" \
-            -H "X-Auth-Key: '''+self.api_key+'''" \
-            -H "Content-Type: application/json" \
-            --data "{\\"type\\":\\"'''+type+'''\\",\\"name\\":\\"'''+name+'''\\",\\"content\\":\\"'''+new_content+'''\\"}"
-        ''')
-        result = json.loads(updaterecord.read())
+        data = {"type": type, "name": name, "content": new_content}
+        updaterecord = self.__put_request__(
+            "https://api.cloudflare.com/client/v4/zones/"+zoneid+"/dns_records/"+recordid, data)
+        result = json.loads(updaterecord)
         if result["success"]:
             logger.info("Successfully Update DNS record of "+name +
                         ", from "+record["content"]+" to "+new_content)
@@ -116,24 +130,18 @@ class Cloudflare():
     # TODO 新建一条记录(type prefix,domain,content,ttl=120)
 
     def get_ZoneID(self):
-        getzone = os.popen('''curl -k -s -X GET "https://api.cloudflare.com/client/v4/zones" \
-            -H "X-Auth-Email: '''+self.api_email+'''" \
-            -H "X-Auth-Key: '''+self.api_key+'''" \
-            -H "Content-Type: application/json"
-        ''')
-        domain_list = json.loads(getzone.read())["result"]
+        getzone = self.__get_request__(
+            "https://api.cloudflare.com/client/v4/zones")
+        domain_list = json.loads(getzone)["result"]
         for domain in domain_list:
             self.zone_id[domain["name"]] = domain["id"]
 
     def get_RecordID(self):
         for domain in self.zone_id.keys():
             self.record_id[domain] = []
-            getrecord = os.popen('''curl -k -s -X GET "https://api.cloudflare.com/client/v4/zones/'''+self.zone_id[domain]+'''/dns_records" \
-                -H "X-Auth-Email: '''+self.api_email+'''" \
-                -H "X-Auth-Key: '''+self.api_key+'''" \
-                -H "Content-Type: application/json"
-            ''')
-            record_list = json.loads(getrecord.read())["result"]
+            getrecord = self.__get_request__(
+                "https://api.cloudflare.com/client/v4/zones/"+self.zone_id[domain]+"/dns_records")
+            record_list = json.loads(getrecord)["result"]
             for record in record_list:
                 self.record_id[domain].append(
                     {"name": record["name"], "id": record["id"], "type": record["type"], "content": record["content"]})
