@@ -1,16 +1,19 @@
 config = {
     "Cloudflare": {
-        "user1":{
-            "email":"admin@google.com",
-            "api_key":"abcdefghijklmnopqrstuvwxtz01234567890",
-            "domains":{
-                "domain1":{
-                    "enable":True,
-                    "prefix":"ddns",
-                    "domin":"google.co.jp",
-                    "type":"AAAA",
+        "user1": {
+            "email": "admin@google.com",
+            "api_key": "abcdefghijklmnopqrstuvwxtz01234567890",
+            "domains": {
+                "domain1": {
+                    "enable": True,
+                    "prefix": "ddns",
+                    "domin": "google.co.jp",
+                    "type": "AAAA",
                 }
             }
         }
     }
 }
+
+# span(sec)
+span = 300
