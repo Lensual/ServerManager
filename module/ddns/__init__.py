@@ -6,9 +6,7 @@ import logger
 from ddns.config import *
 from ddns.DDNS import *
 
-thread_flag = 0  # 线程锁，标记一次DDNS过程是否结束
 stop_flag = 0  # 是否stop
-
 thread_flag = 0  # 标志是否可以stop线程
 
 
