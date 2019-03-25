@@ -108,4 +108,3 @@ venv.bak/
 config.py
 *.conf
 *.bak
-module/ddns/thread.py
