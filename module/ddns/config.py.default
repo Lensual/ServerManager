@@ -7,7 +7,7 @@ config = {
                 "domain1": {
                     "enable": True,
                     "prefix": "ddns",
-                    "domin": "google.co.jp",
+                    "domain": "google.co.jp",
                     "type": "AAAA",
                 }
             }
